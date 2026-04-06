@@ -23,7 +23,15 @@ KEYWORDS = [
     "nextjs junior",
     "desenvolvedor jr",
     "engenheiro de software jr",
-    "analista de software jr"
+    "analista de software jr",
+    "jr",
+    "developer",
+    "engineer",
+    "software",
+    "backend",
+    "full stack",
+    "node",
+    "react",
 ]
 
 BLACKLIST = ["sênior", "senior", "pleno", "lead", "gerente", "manager", "staff"]
@@ -45,9 +53,18 @@ def save_seen_jobs(seen: set):
 
 def is_relevant(title: str) -> bool:
     title_lower = title.lower()
-    has_keyword  = any(kw in title_lower for kw in KEYWORDS)
+
+    # precisa ter junior/jr
+    is_junior = "junior" in title_lower or "jr" in title_lower
+
+    # precisa ter área tech
+    is_tech = any(kw in title_lower for kw in [
+        "developer", "engineer", "software", "backend", "frontend", "full stack"
+    ])
+
     has_blacklist = any(bl in title_lower for bl in BLACKLIST)
-    return has_keyword and not has_blacklist
+
+    return is_junior and is_tech and not has_blacklist
 
 
 def fetch_gupy() -> list[dict]:
@@ -196,18 +213,17 @@ def send_email(new_jobs: list[dict]):
 
 
 def main():
-    seen = load_seen_jobs()
-    all_jobs = fetch_all_jobs()
+    test_jobs = [{
+        "id": "1",
+        "title": "Vaga Teste Full Stack Jr",
+        "company": "Empresa Teste",
+        "location": "Remoto",
+        "url": "https://google.com",
+        "source": "Teste",
+        "date": "2026-04-06"
+    }]
 
-    new_jobs = [j for j in all_jobs if j["id"] not in seen]
-    print(f" {len(new_jobs)} vagas novas (não vistas antes).")
-
-    if new_jobs:
-        send_email(new_jobs)
-        seen.update(j["id"] for j in new_jobs)
-        save_seen_jobs(seen)
-    else:
-        print("Nenhuma vaga nova desde a última verificação.")
+    send_email(test_jobs)
 
 if __name__ == "__main__":
     main()
