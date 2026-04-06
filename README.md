@@ -1,8 +1,8 @@
-# 🚀 Yuri Job Monitor
+# Job Monitor
 
-Monitor automático de vagas para Desenvolvedor Full Stack Jr / Backend Jr.
+Monitor automático simples de vagas Jr.
 
-Roda de graça no **GitHub Actions**, sem servidor, sem custo.
+Roda no **GitHub Actions**, sem servidor, sem custo.
 
 ---
 

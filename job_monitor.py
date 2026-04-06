@@ -8,32 +8,32 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-# ─── CONFIGURAÇÕES ────────────────────────────────────────────────────────────
 
 KEYWORDS = [
-    "desenvolvedor full stack júnior",
+    "desenvolvedor full stack jr",
     "desenvolvedor full stack junior",
     "full stack junior",
     "full stack jr",
-    "desenvolvedor backend júnior",
+    "desenvolvedor backend jr",
     "desenvolvedor backend junior",
     "backend junior",
     "backend jr",
     "node.js junior",
     "react junior",
     "nextjs junior",
+    "desenvolvedor jr",
+    "engenheiro de software jr",
+    "analista de software jr"
 ]
 
-# Palavras que eliminam a vaga automaticamente
 BLACKLIST = ["sênior", "senior", "pleno", "lead", "gerente", "manager", "staff"]
 
 SEEN_JOBS_FILE = Path("seen_jobs.json")
 
-EMAIL_SENDER    = os.environ.get("EMAIL_SENDER")     # seu gmail
-EMAIL_PASSWORD  = os.environ.get("EMAIL_PASSWORD")   # app password do gmail
-EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT")  # onde receber (pode ser o mesmo)
+EMAIL_SENDER    = os.environ.get("EMAIL_SENDER")
+EMAIL_PASSWORD  = os.environ.get("EMAIL_PASSWORD")
+EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT")
 
-# ─── UTILITÁRIOS ──────────────────────────────────────────────────────────────
 
 def load_seen_jobs() -> set:
     if SEEN_JOBS_FILE.exists():
@@ -49,10 +49,8 @@ def is_relevant(title: str) -> bool:
     has_blacklist = any(bl in title_lower for bl in BLACKLIST)
     return has_keyword and not has_blacklist
 
-# ─── FONTES DE VAGAS ──────────────────────────────────────────────────────────
 
 def fetch_gupy() -> list[dict]:
-    """API pública do Gupy — maior plataforma de vagas do Brasil."""
     jobs = []
     search_terms = ["full stack junior", "backend junior", "desenvolvedor junior"]
     
@@ -85,7 +83,6 @@ def fetch_gupy() -> list[dict]:
 
 
 def fetch_linkedin_rss() -> list[dict]:
-    """LinkedIn RSS feed de busca de vagas."""
     jobs = []
     searches = [
         "full+stack+junior",
@@ -97,9 +94,8 @@ def fetch_linkedin_rss() -> list[dict]:
         try:
             url = (
                 f"https://www.linkedin.com/jobs/search/?keywords={term}"
-                f"&location=Brazil&f_TPR=r86400&f_E=1,2"  # últimas 24h, entry/associate
+                f"&location=Brazil&f_TPR=r86400&f_E=1,2"
             )
-            # LinkedIn RSS público
             rss_url = f"https://www.linkedin.com/jobs/search.rss?keywords={term}&location=Brazil&f_E=1,2"
             feed = feedparser.parse(rss_url)
             
@@ -124,12 +120,11 @@ def fetch_linkedin_rss() -> list[dict]:
 
 
 def fetch_all_jobs() -> list[dict]:
-    print("🔍 Buscando vagas...")
+    print("Buscando vagas...")
     all_jobs = []
     all_jobs.extend(fetch_gupy())
     all_jobs.extend(fetch_linkedin_rss())
     
-    # Deduplica por ID
     seen_ids = set()
     unique = []
     for job in all_jobs:
@@ -140,7 +135,7 @@ def fetch_all_jobs() -> list[dict]:
     print(f"   {len(unique)} vagas relevantes encontradas.")
     return unique
 
-# ─── EMAIL ────────────────────────────────────────────────────────────────────
+# EMAIL
 
 def build_email_html(new_jobs: list[dict]) -> str:
     rows = ""
@@ -163,7 +158,7 @@ def build_email_html(new_jobs: list[dict]) -> str:
     return f"""
     <html><body style="font-family:sans-serif;background:#f9fafb;padding:24px;">
       <div style="max-width:700px;margin:auto;background:white;border-radius:12px;padding:32px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <h2 style="color:#111827;margin-top:0;">🚀 {len(new_jobs)} vagas novas para você</h2>
+        <h2 style="color:#111827;margin-top:0;"> {len(new_jobs)} vagas novas para você</h2>
         <p style="color:#6b7280;">Encontradas em {datetime.now().strftime('%d/%m/%Y às %H:%M')} — filtrando por: Full Stack Jr, Backend Jr</p>
         <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-top:16px;">
           <thead>
@@ -182,11 +177,11 @@ def build_email_html(new_jobs: list[dict]) -> str:
 
 def send_email(new_jobs: list[dict]):
     if not all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECIPIENT]):
-        print("⚠️  Variáveis de email não configuradas.")
+        print("Variáveis de email não configuradas.")
         return
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"🚀 {len(new_jobs)} vagas novas — {datetime.now().strftime('%d/%m/%Y')}"
+    msg["Subject"] = f" {len(new_jobs)} vagas novas — {datetime.now().strftime('%d/%m/%Y')}"
     msg["From"]    = EMAIL_SENDER
     msg["To"]      = EMAIL_RECIPIENT
     msg.attach(MIMEText(build_email_html(new_jobs), "html"))
@@ -195,18 +190,17 @@ def send_email(new_jobs: list[dict]):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENT, msg.as_string())
-        print(f"✅ Email enviado com {len(new_jobs)} vagas!")
+        print(f" Email enviado com {len(new_jobs)} vagas!")
     except Exception as e:
-        print(f"❌ Erro ao enviar email: {e}")
+        print(f" Erro ao enviar email: {e}")
 
-# ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
     seen = load_seen_jobs()
     all_jobs = fetch_all_jobs()
 
     new_jobs = [j for j in all_jobs if j["id"] not in seen]
-    print(f"🆕 {len(new_jobs)} vagas novas (não vistas antes).")
+    print(f" {len(new_jobs)} vagas novas (não vistas antes).")
 
     if new_jobs:
         send_email(new_jobs)

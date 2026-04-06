@@ -3,7 +3,7 @@ name: Job Monitor
 on:
   schedule:
     - cron: "0 9,21 * * *"   # roda às 09h e 21h (UTC) = 06h e 18h horário de Brasília
-  workflow_dispatch:          # permite rodar manualmente pelo GitHub
+  workflow_dispatch:         
 
 jobs:
   monitor:
