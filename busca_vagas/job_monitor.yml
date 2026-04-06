@@ -1,0 +1,43 @@
+name: Job Monitor
+
+on:
+  schedule:
+    - cron: "0 9,21 * * *"   # roda às 09h e 21h (UTC) = 06h e 18h horário de Brasília
+  workflow_dispatch:          # permite rodar manualmente pelo GitHub
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Restaurar vagas já vistas
+        uses: actions/cache@v4
+        with:
+          path: seen_jobs.json
+          key: seen-jobs-${{ runner.os }}
+          restore-keys: seen-jobs-
+
+      - name: Rodar monitor de vagas
+        env:
+          EMAIL_SENDER:    ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD:  ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+        run: python job_monitor.py
+
+      - name: Salvar vagas vistas atualizadas
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: seen_jobs.json
+          key: seen-jobs-${{ runner.os }}-${{ github.run_id }}
