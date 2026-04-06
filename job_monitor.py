@@ -196,6 +196,10 @@ def send_email(new_jobs: list[dict]):
     if not all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECIPIENT]):
         print("Variáveis de email não configuradas.")
         return
+        
+    print("SENDER:", EMAIL_SENDER)
+    print("PASSWORD:", "OK" if EMAIL_PASSWORD else None)
+    print("RECIPIENT:", EMAIL_RECIPIENT)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f" {len(new_jobs)} vagas novas — {datetime.now().strftime('%d/%m/%Y')}"
@@ -224,6 +228,6 @@ def main():
     }]
 
     send_email(test_jobs)
-
+    
 if __name__ == "__main__":
     main()
