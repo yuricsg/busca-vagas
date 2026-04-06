@@ -217,17 +217,20 @@ def send_email(new_jobs: list[dict]):
 
 
 def main():
-    test_jobs = [{
-        "id": "1",
-        "title": "Vaga Teste Full Stack Jr",
-        "company": "Empresa Teste",
-        "location": "Remoto",
-        "url": "https://google.com",
-        "source": "Teste",
-        "date": "2026-04-06"
-    }]
+    if not SEEN_JOBS_FILE.exists():
+        SEEN_JOBS_FILE.write_text("[]")
+    seen = load_seen_jobs()
+    all_jobs = fetch_all_jobs()
 
-    send_email(test_jobs)
+    new_jobs = [j for j in all_jobs if j["id"] not in seen]
+    print(f" {len(new_jobs)} vagas novas (não vistas antes).")
+
+    if new_jobs:
+        send_email(new_jobs)
+        seen.update(j["id"] for j in new_jobs)
+        save_seen_jobs(seen)
+    else:
+        print("Nenhuma vaga nova desde a última verificação.")
     
 if __name__ == "__main__":
     main()
