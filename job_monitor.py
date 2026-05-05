@@ -50,10 +50,10 @@ def load_seen_jobs() -> set:
 def save_seen_jobs(seen: set):
     SEEN_JOBS_FILE.write_text(json.dumps(list(seen), ensure_ascii=False, indent=2))
 
-def is_relevant(title: str) -> bool:
+def is_relevant(title: str, debug: bool = False) -> bool:
     title_lower = title.lower()
 
-    is_junior = "junior" in title_lower or "jr" in title_lower
+    is_junior = any(kw in title_lower for kw in ["junior", "júnior", "jr", "entry", "entry-level"])
 
     is_tech = any(kw in title_lower for kw in [
         "developer", "engineer", "software", "backend", "frontend", "full stack",
@@ -62,6 +62,9 @@ def is_relevant(title: str) -> bool:
     ])
 
     has_blacklist = any(bl in title_lower for bl in BLACKLIST)
+
+    if debug:
+        print(f"  titulo='{title}' | junior={is_junior} tech={is_tech} blacklist={has_blacklist}")
 
     return is_junior and is_tech and not has_blacklist
 
@@ -90,7 +93,7 @@ def fetch_gupy() -> list[dict]:
             print(f"[Gupy] '{term}' → {encontradas} vagas brutas")
             for job in data.get("data", []):
                 title = job.get("name", "")
-                if not is_relevant(title):
+                if not is_relevant(title, debug=True):
                     continue
                 jobs.append({
                     "id":       f"gupy_{job.get('id')}",
@@ -124,7 +127,7 @@ def fetch_remotive() -> list[dict]:
             print(f"[Remotive] '{category}' → {len(jobs_raw)} vagas brutas")
             for job in jobs_raw:
                 title = job.get("title", "")
-                if not is_relevant(title):
+                if not is_relevant(title, debug=True):
                     continue
                 jobs.append({
                     "id":       f"remotive_{job.get('id')}",
