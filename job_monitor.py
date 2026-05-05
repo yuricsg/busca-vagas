@@ -2,7 +2,6 @@ import os
 import json
 import smtplib
 import requests
-import feedparser
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -54,12 +53,12 @@ def save_seen_jobs(seen: set):
 def is_relevant(title: str) -> bool:
     title_lower = title.lower()
 
-    # precisa ter junior/jr
     is_junior = "junior" in title_lower or "jr" in title_lower
 
-    # precisa ter área tech
     is_tech = any(kw in title_lower for kw in [
-        "developer", "engineer", "software", "backend", "frontend", "full stack"
+        "developer", "engineer", "software", "backend", "frontend", "full stack",
+        "desenvolvedor", "engenheiro", "analista", "programador",
+        "node", "react", "typescript", "python", "java",
     ])
 
     has_blacklist = any(bl in title_lower for bl in BLACKLIST)
@@ -69,7 +68,12 @@ def is_relevant(title: str) -> bool:
 
 def fetch_gupy() -> list[dict]:
     jobs = []
-    search_terms = ["full stack junior", "backend junior", "desenvolvedor junior"]
+    search_terms = [
+        "desenvolvedor junior",
+        "desenvolvedor full stack junior",
+        "desenvolvedor backend junior",
+        "programador junior",
+    ]
 
     for term in search_terms:
         try:
@@ -103,43 +107,36 @@ def fetch_gupy() -> list[dict]:
     return jobs
 
 
-def fetch_indeed_rss() -> list[dict]:
+def fetch_remotive() -> list[dict]:
     jobs = []
-    searches = [
-        ("full+stack+junior", "Full Stack Junior"),
-        ("backend+junior+node", "Backend Junior Node"),
-        ("desenvolvedor+junior+typescript", "Dev Junior TypeScript"),
-    ]
+    categories = ["software-dev", "web-design"]
 
-    for term, label in searches:
+    for category in categories:
         try:
-            rss_url = (
-                f"https://br.indeed.com/rss?q={term}&l=&sort=date&fromage=3"
-            )
-            headers = {"User-Agent": "Mozilla/5.0 (compatible; JobMonitor/1.0)"}
-            resp = requests.get(rss_url, headers=headers, timeout=10)
-            print(f"[Indeed] '{label}' → status {resp.status_code}")
+            url = f"https://remotive.com/api/remote-jobs?category={category}&limit=50"
+            resp = requests.get(url, timeout=10)
+            print(f"[Remotive] '{category}' → status {resp.status_code}")
             if resp.status_code != 200:
-                print(f"[Indeed] Resposta: {resp.text[:300]}")
+                print(f"[Remotive] Resposta: {resp.text[:300]}")
                 continue
-            feed = feedparser.parse(resp.content)
-            print(f"[Indeed] '{label}' → {len(feed.entries)} entradas no feed")
-            for entry in feed.entries[:20]:
-                title = entry.get("title", "")
+            data = resp.json()
+            jobs_raw = data.get("jobs", [])
+            print(f"[Remotive] '{category}' → {len(jobs_raw)} vagas brutas")
+            for job in jobs_raw:
+                title = job.get("title", "")
                 if not is_relevant(title):
                     continue
-                job_id = entry.get("id", entry.get("link", ""))
                 jobs.append({
-                    "id":       f"indeed_{job_id}",
+                    "id":       f"remotive_{job.get('id')}",
                     "title":    title,
-                    "company":  entry.get("author", "N/A"),
-                    "location": entry.get("indeed_city", "Ver vaga"),
-                    "url":      entry.get("link", ""),
-                    "source":   "Indeed",
-                    "date":     entry.get("published", "")[:10] if entry.get("published") else "",
+                    "company":  job.get("company_name", "N/A"),
+                    "location": job.get("candidate_required_location", "Remoto"),
+                    "url":      job.get("url", ""),
+                    "source":   "Remotive",
+                    "date":     job.get("publication_date", "")[:10] if job.get("publication_date") else "",
                 })
         except Exception as e:
-            print(f"[Indeed] Erro em '{label}': {e}")
+            print(f"[Remotive] Erro em '{category}': {e}")
 
     return jobs
 
@@ -148,7 +145,7 @@ def fetch_all_jobs() -> list[dict]:
     print("Buscando vagas...")
     all_jobs = []
     all_jobs.extend(fetch_gupy())
-    all_jobs.extend(fetch_indeed_rss())
+    all_jobs.extend(fetch_remotive())
     
     seen_ids = set()
     unique = []
