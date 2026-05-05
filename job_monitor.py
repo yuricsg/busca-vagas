@@ -70,16 +70,20 @@ def is_relevant(title: str) -> bool:
 def fetch_gupy() -> list[dict]:
     jobs = []
     search_terms = ["full stack junior", "backend junior", "desenvolvedor junior"]
-    
+
     for term in search_terms:
         try:
             url = "https://portal.api.gupy.io/api/v1/jobs"
             params = {"jobName": term, "limit": 20}
             headers = {"User-Agent": "Mozilla/5.0"}
             resp = requests.get(url, params=params, headers=headers, timeout=10)
+            print(f"[Gupy] '{term}' → status {resp.status_code}")
             if resp.status_code != 200:
+                print(f"[Gupy] Resposta: {resp.text[:300]}")
                 continue
             data = resp.json()
+            encontradas = len(data.get("data", []))
+            print(f"[Gupy] '{term}' → {encontradas} vagas brutas")
             for job in data.get("data", []):
                 title = job.get("name", "")
                 if not is_relevant(title):
@@ -94,45 +98,49 @@ def fetch_gupy() -> list[dict]:
                     "date":     job.get("publishedDate", "")[:10] if job.get("publishedDate") else "",
                 })
         except Exception as e:
-            print(f"[Gupy] Erro: {e}")
-    
+            print(f"[Gupy] Erro em '{term}': {e}")
+
     return jobs
 
 
-def fetch_linkedin_rss() -> list[dict]:
+def fetch_indeed_rss() -> list[dict]:
     jobs = []
     searches = [
-        "full+stack+junior",
-        "backend+junior+node",
-        "desenvolvedor+junior+typescript",
+        ("full+stack+junior", "Full Stack Junior"),
+        ("backend+junior+node", "Backend Junior Node"),
+        ("desenvolvedor+junior+typescript", "Dev Junior TypeScript"),
     ]
-    
-    for term in searches:
+
+    for term, label in searches:
         try:
-            url = (
-                f"https://www.linkedin.com/jobs/search/?keywords={term}"
-                f"&location=Brazil&f_TPR=r86400&f_E=1,2"
+            rss_url = (
+                f"https://br.indeed.com/rss?q={term}&l=&sort=date&fromage=3"
             )
-            rss_url = f"https://www.linkedin.com/jobs/search.rss?keywords={term}&location=Brazil&f_E=1,2"
-            feed = feedparser.parse(rss_url)
-            
-            for entry in feed.entries[:15]:
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; JobMonitor/1.0)"}
+            resp = requests.get(rss_url, headers=headers, timeout=10)
+            print(f"[Indeed] '{label}' → status {resp.status_code}")
+            if resp.status_code != 200:
+                print(f"[Indeed] Resposta: {resp.text[:300]}")
+                continue
+            feed = feedparser.parse(resp.content)
+            print(f"[Indeed] '{label}' → {len(feed.entries)} entradas no feed")
+            for entry in feed.entries[:20]:
                 title = entry.get("title", "")
                 if not is_relevant(title):
                     continue
                 job_id = entry.get("id", entry.get("link", ""))
                 jobs.append({
-                    "id":       f"linkedin_{job_id}",
+                    "id":       f"indeed_{job_id}",
                     "title":    title,
                     "company":  entry.get("author", "N/A"),
-                    "location": "Ver vaga",
+                    "location": entry.get("indeed_city", "Ver vaga"),
                     "url":      entry.get("link", ""),
-                    "source":   "LinkedIn",
+                    "source":   "Indeed",
                     "date":     entry.get("published", "")[:10] if entry.get("published") else "",
                 })
         except Exception as e:
-            print(f"[LinkedIn RSS] Erro: {e}")
-    
+            print(f"[Indeed] Erro em '{label}': {e}")
+
     return jobs
 
 
@@ -140,7 +148,7 @@ def fetch_all_jobs() -> list[dict]:
     print("Buscando vagas...")
     all_jobs = []
     all_jobs.extend(fetch_gupy())
-    all_jobs.extend(fetch_linkedin_rss())
+    all_jobs.extend(fetch_indeed_rss())
     
     seen_ids = set()
     unique = []
